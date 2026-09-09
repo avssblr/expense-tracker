@@ -1,0 +1,145 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  displayName  String
+  passwordHash String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  memberships     HouseholdMember[]
+  expensesCreated Expense[]         @relation("ExpenseCreatedBy")
+
+  @@map("users")
+}
+
+model Household {
+  id        Int      @id @default(autoincrement())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members        HouseholdMember[]
+  categories     Category[]
+  paymentMethods PaymentMethod[]
+  expenses       Expense[]
+  monthlyPlans   MonthlyPlan[]
+  budgets        MonthlyBudget[]
+
+  @@map("households")
+}
+
+model HouseholdMember {
+  id          Int      @id @default(autoincrement())
+  householdId Int
+  userId      Int
+  role        String   @default("member")
+  createdAt   DateTime @default(now())
+
+  household Household @relation(fields: [householdId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@unique([householdId, userId])
+  @@index([userId])
+  @@map("household_members")
+}
+
+model Category {
+  id          Int      @id @default(autoincrement())
+  householdId Int
+  name        String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  household Household       @relation(fields: [householdId], references: [id])
+  expenses  Expense[]
+  budgets   MonthlyBudget[]
+
+  @@unique([householdId, name])
+  @@index([householdId])
+  @@map("categories")
+}
+
+model PaymentMethod {
+  id          Int      @id @default(autoincrement())
+  householdId Int
+  name        String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  household Household @relation(fields: [householdId], references: [id])
+  expenses  Expense[]
+
+  @@unique([householdId, name])
+  @@index([householdId])
+  @@map("payment_methods")
+}
+
+model Expense {
+  id              Int  @id @default(autoincrement())
+  householdId     Int
+  categoryId      Int
+  createdByUserId Int
+  paymentMethodId Int?
+
+  amount      Decimal  @db.Decimal(14, 2)
+  expenseDate DateTime @db.Date
+  description String
+  notes       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  household     Household      @relation(fields: [householdId], references: [id])
+  category      Category       @relation(fields: [categoryId], references: [id])
+  createdBy     User           @relation("ExpenseCreatedBy", fields: [createdByUserId], references: [id])
+  paymentMethod PaymentMethod? @relation(fields: [paymentMethodId], references: [id])
+
+  @@index([householdId, expenseDate])
+  @@index([categoryId, expenseDate])
+  @@index([createdByUserId])
+  @@map("expenses")
+}
+
+model MonthlyPlan {
+  id            Int      @id @default(autoincrement())
+  householdId   Int
+  month         DateTime @db.Date
+  plannedIncome Decimal  @db.Decimal(14, 2)
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  household Household @relation(fields: [householdId], references: [id])
+
+  @@unique([householdId, month])
+  @@index([month])
+  @@map("monthly_plans")
+}
+
+model MonthlyBudget {
+  id            Int      @id @default(autoincrement())
+  householdId   Int
+  categoryId    Int
+  month         DateTime @db.Date
+  plannedAmount Decimal  @db.Decimal(14, 2)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  household Household @relation(fields: [householdId], references: [id])
+  category  Category  @relation(fields: [categoryId], references: [id])
+
+  @@unique([householdId, categoryId, month])
+  @@index([householdId, month])
+  @@map("monthly_budgets")
+}
