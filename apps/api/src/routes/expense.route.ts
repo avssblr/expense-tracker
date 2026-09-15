@@ -244,4 +244,217 @@ router.get("/", async (req, res) => {
   }
 });
 
+router.put("/:id", async (req, res) => {
+  try {
+    const { householdId, userId } =
+      getRequestContext(req);
+
+    const allowed = await isHouseholdMember(
+      householdId,
+      userId,
+    );
+
+    if (!allowed) {
+      return res.status(403).json({
+        error: "You are not a member of this household",
+      });
+    }
+
+    const expenseId = Number(req.params.id);
+
+    if (
+      !Number.isInteger(expenseId) ||
+      expenseId <= 0
+    ) {
+      return res.status(400).json({
+        error: "Invalid expense ID",
+      });
+    }
+
+    const result =
+      createExpenseSchema.safeParse(req.body);
+
+    if (!result.success) {
+      return res.status(400).json({
+        error: "Invalid expense",
+        details: result.error.issues,
+      });
+    }
+
+    const existing =
+      await prisma.expense.findFirst({
+        where: {
+          id: expenseId,
+          householdId,
+        },
+      });
+
+    if (!existing) {
+      return res.status(404).json({
+        error: "Expense not found",
+      });
+    }
+
+    const {
+      categoryId,
+      paymentMethodId,
+      amount,
+      expenseDate,
+      description,
+      notes,
+    } = result.data;
+
+    const category =
+      await prisma.category.findFirst({
+        where: {
+          id: categoryId,
+          householdId,
+          isActive: true,
+        },
+      });
+
+    if (!category) {
+      return res.status(400).json({
+        error: "Invalid category",
+      });
+    }
+
+    if (paymentMethodId) {
+      const paymentMethod =
+        await prisma.paymentMethod.findFirst({
+          where: {
+            id: paymentMethodId,
+            householdId,
+            isActive: true,
+          },
+        });
+
+      if (!paymentMethod) {
+        return res.status(400).json({
+          error: "Invalid payment method",
+        });
+      }
+    }
+
+    const expense =
+      await prisma.expense.update({
+        where: {
+          id: expenseId,
+        },
+
+        data: {
+          categoryId,
+          paymentMethodId:
+            paymentMethodId ?? null,
+
+          amount,
+
+          expenseDate: new Date(
+            `${expenseDate}T00:00:00.000Z`,
+          ),
+
+          description,
+          notes: notes ?? null,
+        },
+
+        include: {
+          category: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+
+          createdBy: {
+            select: {
+              id: true,
+              displayName: true,
+            },
+          },
+
+          paymentMethod: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      });
+
+    res.json(serializeExpense(expense));
+  } catch (error) {
+    console.error(
+      "Update expense failed:",
+      error,
+    );
+
+    res.status(500).json({
+      error: "Unable to update expense",
+    });
+  }
+});
+
+router.delete("/:id", async (req, res) => {
+  try {
+    const { householdId, userId } =
+      getRequestContext(req);
+
+    const allowed = await isHouseholdMember(
+      householdId,
+      userId,
+    );
+
+    if (!allowed) {
+      return res.status(403).json({
+        error: "You are not a member of this household",
+      });
+    }
+
+    const expenseId = Number(req.params.id);
+
+    if (
+      !Number.isInteger(expenseId) ||
+      expenseId <= 0
+    ) {
+      return res.status(400).json({
+        error: "Invalid expense ID",
+      });
+    }
+
+    const existing =
+      await prisma.expense.findFirst({
+        where: {
+          id: expenseId,
+          householdId,
+        },
+      });
+
+    if (!existing) {
+      return res.status(404).json({
+        error: "Expense not found",
+      });
+    }
+
+    await prisma.expense.delete({
+      where: {
+        id: expenseId,
+      },
+    });
+
+    res.json({
+      status: "deleted",
+      id: expenseId,
+    });
+  } catch (error) {
+    console.error(
+      "Delete expense failed:",
+      error,
+    );
+
+    res.status(500).json({
+      error: "Unable to delete expense",
+    });
+  }
+});
+
 export default router;
