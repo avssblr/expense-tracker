@@ -13,6 +13,11 @@ import AddExpenseForm from "@/components/add-expense-form";
 import TransactionList from "@/components/transaction-list";
 import MonthSelector from "@/components/month-selector";
 import MonthlySetup from "@/components/monthly-setup";
+import { redirect } from "next/navigation";
+import { getSessionToken } from "@/lib/session";
+import LogoutButton from "@/components/logout-button";
+
+
 
 export default async function Home(
   props: {
@@ -21,6 +26,12 @@ export default async function Home(
     }>;
   },
 ) {
+  const token = await getSessionToken();
+
+  if(!token){
+    redirect("/login");
+  }
+
   const searchParams =
     await props.searchParams;
 
@@ -66,6 +77,7 @@ export default async function Home(
       </div>
 
       <MonthSelector month={month} />
+      <LogoutButton />
     </div>
 
         <section className="grid gap-4 md:grid-cols-3">
