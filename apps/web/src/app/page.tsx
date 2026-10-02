@@ -1,259 +1,181 @@
+import { redirect } from "next/navigation";
+
+import { getSessionToken } from "@/lib/session";
+
 import {
   getBudgets,
   getCategories,
+  getCategoryTree,
+  getCurrentUser,
   getDashboard,
   getExpenses,
-  getMonthlyPlan,
   getPaymentMethods,
 } from "@/lib/api";
 
-import { formatINR } from "@/lib/currency";
-
+import MonthSelector from "@/components/month-selector";
+import LogoutButton from "@/components/logout-button";
+import FinanceSummary from "@/components/finance-summary";
+import FinanceCharts from "@/components/finance-charts";
+import BudgetOverview from "@/components/budget-overview";
+import MonthlySetup from "@/components/monthly-setup";
 import AddExpenseForm from "@/components/add-expense-form";
 import TransactionList from "@/components/transaction-list";
-import MonthSelector from "@/components/month-selector";
-import MonthlySetup from "@/components/monthly-setup";
-import { redirect } from "next/navigation";
-import { getSessionToken } from "@/lib/session";
-import LogoutButton from "@/components/logout-button";
+import CategoryManager from "@/components/category-manager";
 
+type PageProps = {
+  searchParams?: Promise<{
+    month?: string;
+  }>;
+};
 
-
-export default async function Home(
-  props: {
-    searchParams?: Promise<{
-      month?: string;
-    }>;
-  },
-) {
+export default async function Home({
+  searchParams,
+}: PageProps) {
   const token = await getSessionToken();
 
-  if(!token){
+  if (!token) {
     redirect("/login");
   }
 
-  const searchParams =
-    await props.searchParams;
+  const params = await searchParams;
 
-  const requestedMonth =
-    searchParams?.month;
+  const requestedMonth = params?.month;
+
+  const now = new Date();
+
+  const currentMonth =
+    `${now.getFullYear()}-` +
+    String(now.getMonth() + 1).padStart(2, "0");
 
   const month =
     requestedMonth &&
-    /^\d{4}-(0[1-9]|1[0-2])$/.test(
-      requestedMonth,
-    )
+    /^\d{4}-(0[1-9]|1[0-2])$/.test(requestedMonth)
       ? requestedMonth
-      : "2026-09";
+      : currentMonth;
 
   const [
+    identity,
     dashboard,
     categories,
+    categoryTree,
     paymentMethods,
     expenses,
-    plan,
     budgets,
   ] = await Promise.all([
+    getCurrentUser(),
     getDashboard(month),
     getCategories(),
+    getCategoryTree(),
     getPaymentMethods(),
     getExpenses(month),
-    getMonthlyPlan(month),
     getBudgets(month),
   ]);
 
+  const isOwner = identity.household.role === "owner";
+
+  const formattedMonth = new Intl.DateTimeFormat(
+    "en-IN",
+    {
+      month: "long",
+      year: "numeric",
+      timeZone: "UTC",
+    },
+  ).format(new Date(`${month}-01T00:00:00.000Z`));
+
   return (
-    <main className="min-h-screen bg-gray-50 p-6">
-      <div className="mx-auto max-w-6xl">
-        <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">
-          Expense Tracker
-        </h1>
+    <main className="min-h-screen bg-[#F0F5FF] px-4 py-6 text-gray-900 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl space-y-7">
 
-        <p className="mt-1 text-gray-600">
-          Household monthly finances
-        </p>
-      </div>
+        {/* Header */}
+        <header className="rounded-2xl bg-white p-5 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-4">
 
-      <MonthSelector month={month} />
-      <LogoutButton />
-    </div>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-indigo-600">
+                Household Expense Tracker
+              </p>
 
-        <section className="grid gap-4 md:grid-cols-3">
-          <SummaryCard
-            title="Incoming Money"
-            value={formatINR(
-              dashboard.summary.incoming,
-            )}
-          />
+              <h1 className="mt-2 text-2xl font-bold text-slate-900 sm:text-3xl">
+                Welcome, {identity.user.displayName}!
+              </h1>
 
-          <SummaryCard
-            title="Spent"
-            value={formatINR(
-              dashboard.summary.spent,
-            )}
-          />
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <p className="text-sm text-gray-500">
+                  {identity.household.name}
+                </p>
 
-          <SummaryCard
-            title="Remaining"
-            value={formatINR(
-              dashboard.summary.remaining,
-            )}
-          />
-        </section>
-
-        <section className="mt-8">
-          <MonthlySetup
-            month={month}
-            categories={categories}
-            plan={plan}
-            budgets={budgets}
-          />
-        </section>
-
-        <section className="mt-8">
-          <h2 className="mb-4 text-xl font-semibold">
-            Monthly Spending
-          </h2>
-
-          <div className="rounded-xl bg-white p-6 shadow-sm">
-            <div className="mb-2 flex justify-between">
-              <span>
-                Overall utilization
-              </span>
-
-              <span className="font-semibold">
-                {dashboard.summary
-                  .utilizationPercent ?? 0}
-                %
-              </span>
+                <span className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-700">
+                  {isOwner ? "Owner" : "Member"}
+                </span>
+              </div>
             </div>
 
-            <ProgressBar
-              value={
-                dashboard.summary
-                  .utilizationPercent ?? 0
-              }
-            />
+            <div className="flex items-center gap-3">
+              <MonthSelector month={month} />
+              <LogoutButton />
+            </div>
           </div>
-        </section>
+        </header>
 
-        <section className="mt-8">
-          <h2 className="mb-4 text-xl font-semibold">
-            Category Budgets
+        {/* Monthly summary */}
+        <section>
+          <h2 className="mb-4 text-xl font-bold text-slate-900">
+            {formattedMonth} Overview
           </h2>
 
-          <div className="space-y-4">
-            {dashboard.categories.map(
-              (category) => (
-                <div
-                  key={category.categoryId}
-                  className="rounded-xl bg-white p-5 shadow-sm"
-                >
-                  <div className="mb-3 flex items-center justify-between">
-                    <div>
-                      <h3 className="font-semibold">
-                        {category.category}
-                      </h3>
-
-                      <p className="text-sm text-gray-500">
-                        {formatINR(category.spent)}
-                        {" of "}
-                        {formatINR(category.budget)}
-                      </p>
-                    </div>
-
-                    <div className="text-right">
-                      <div className="font-semibold">
-                        {category.utilizationPercent ??
-                          0}
-                        %
-                      </div>
-
-                      <div className="text-sm text-gray-500">
-                        {category.status}
-                      </div>
-                    </div>
-                  </div>
-
-                  <ProgressBar
-                    value={
-                      category.utilizationPercent ??
-                      0
-                    }
-                  />
-
-                  <p className="mt-2 text-sm text-gray-500">
-                    Remaining:{" "}
-                    {formatINR(
-                      category.remaining,
-                    )}
-                  </p>
-                </div>
-              ),
-            )}
-          </div>
-        </section>
-        <section className="mt-8">
-          <AddExpenseForm
-            key={month}
-            month = {month}
-            categories={categories}
-            paymentMethods={paymentMethods}
-          />
+          <FinanceSummary dashboard={dashboard} />
         </section>
 
-        <section className="mt-8">
-          <TransactionList
-            expenses={expenses}
+        {/* Financial charts */}
+        <FinanceCharts
+          key={`charts-${month}`}
+          dashboard={dashboard}
+        />
+
+        {/* Category budgets and alerts */}
+        <BudgetOverview
+          key={`budget-overview-${month}`}
+          categories={dashboard.categories}
+        />
+
+        {/* Income and budget configuration: owner only */}
+        {isOwner && (
+          <MonthlySetup
+            key={`monthly-setup-${month}`}
+            month={month}
             categories={categories}
-            paymentMethods={paymentMethods}
+            budgets={budgets}
           />
-      </section>
+        )}
+
+        {isOwner && (
+          <CategoryManager
+            categories={categoryTree}
+          />
+        )}
+
+        {/* Both users can add an expense */}
+        <AddExpenseForm
+          key={`add-expense-${month}`}
+          month={month}
+          categories={categories}
+          paymentMethods={paymentMethods}
+        />
+
+        {/* Both users can view transactions;
+            only the owner receives editing controls */}
+        <TransactionList
+          key={`transactions-${month}`}
+          expenses={expenses}
+          categories={categories}
+          paymentMethods={paymentMethods}
+          canManage={isOwner}
+        />
+
+        <footer className="py-4 text-center text-xs text-gray-500">
+          Household Expense Tracker
+        </footer>
       </div>
     </main>
-  );
-}
-
-function SummaryCard({
-  title,
-  value,
-}: {
-  title: string;
-  value: string;
-}) {
-  return (
-    <div className="rounded-xl bg-white p-6 shadow-sm">
-      <p className="text-sm text-gray-500">
-        {title}
-      </p>
-
-      <p className="mt-2 text-2xl font-bold">
-        {value}
-      </p>
-    </div>
-  );
-}
-
-function ProgressBar({
-  value,
-}: {
-  value: number;
-}) {
-  const width = Math.min(
-    Math.max(value, 0),
-    100,
-  );
-
-  return (
-    <div className="h-3 overflow-hidden rounded-full bg-gray-200">
-      <div
-        className="h-full bg-black transition-all"
-        style={{
-          width: `${width}%`,
-        }}
-      />
-    </div>
   );
 }

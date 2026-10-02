@@ -56,16 +56,20 @@ model Category {
   id          Int      @id @default(autoincrement())
   householdId Int
   name        String
+  parentId    Int?
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   household Household       @relation(fields: [householdId], references: [id])
+  parent   Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
+  children Category[] @relation("CategoryHierarchy")
   expenses  Expense[]
   budgets   MonthlyBudget[]
 
   @@unique([householdId, name])
   @@index([householdId])
+  @@index([parentId])
   @@map("categories")
 }
 

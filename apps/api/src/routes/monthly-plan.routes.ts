@@ -5,10 +5,11 @@ import { getRequestContext } from "../lib/request-contex.js";
 import { isHouseholdMember } from "../lib/access.js";
 import { monthlyPlanSchema } from "../schemas/monthly-plan.schema.js";
 import { parseMonth } from "../utils/month.js";
+import { requireOwner } from "../middleware/owner.middleware.js";
 
 const router = Router();
 
-router.put("/:month", async (req, res) => {
+router.put("/:month", requireOwner, async (req, res) => {
   try {
     const { householdId, userId } =
       getRequestContext(req);
@@ -24,7 +25,13 @@ router.put("/:month", async (req, res) => {
       });
     }
 
-    const { month } = req.params;
+    const month = req.params.month;
+
+    if (typeof month !== "string") {
+      return res.status(400).json({
+        error: "Invalid month parameter",
+      });
+    }
 
     let monthDate: Date;
 
@@ -97,7 +104,13 @@ router.get("/:month", async (req, res) => {
       });
     }
 
-    const { month } = req.params;
+    const month = req.params.month;
+
+    if (typeof month !== "string") {
+      return res.status(400).json({
+        error: "Invalid month parameter",
+      });
+    }
 
     let monthDate: Date;
 

@@ -7,6 +7,8 @@ import {
   monthSchema,
 } from "../schemas/expense.schema.js";
 
+import { requireOwner } from "../middleware/owner.middleware.js";
+
 const router = Router();
 
 function monthRange(month: string) {
@@ -244,7 +246,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-router.put("/:id", async (req, res) => {
+router.put("/:id", requireOwner, async (req, res) => {
   try {
     const { householdId, userId } =
       getRequestContext(req);
@@ -394,7 +396,7 @@ router.put("/:id", async (req, res) => {
   }
 });
 
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", requireOwner, async (req, res) => {
   try {
     const { householdId, userId } =
       getRequestContext(req);

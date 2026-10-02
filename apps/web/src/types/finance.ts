@@ -3,7 +3,28 @@ export type Category = {
   householdId: number;
   name: string;
   isActive: boolean;
+  parentId: number | null;
+  parent:{
+    id: number;
+    name: string;
+  } | null;
+
+  hasChildren: boolean;
 };
+
+export type CategoryTreeNode = {
+  id: number;
+  name: string;
+  parentId: number | null;
+  isActive: boolean;
+
+  children: {
+    id: number;
+    name: string;
+    parentId: number | null;
+    isActive: boolean;
+  }[];
+}
 
 export type PaymentMethod = {
   id: number;

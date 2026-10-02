@@ -194,14 +194,21 @@ export default function AddExpenseForm({
               Select category
             </option>
 
-            {categories.map((category) => (
-              <option
-                key={category.id}
-                value={category.id}
-              >
-                {category.name}
-              </option>
-            ))}
+            {categories
+              .filter(
+                (category) =>
+                  !category.hasChildren,
+              )
+              .map((category) => (
+                <option
+                  key={category.id}
+                  value={category.id}
+                >
+                  {category.parent
+                    ? `${category.parent.name} › ${category.name}`
+                    : category.name}
+                </option>
+              ))}
           </select>
         </label>
 

@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 
+import {LogOut} from "lucide-react";
+
+
 export default function LogoutButton() {
   const [loading, setLoading] = useState(false);
 
@@ -31,9 +34,11 @@ export default function LogoutButton() {
       type="button"
       onClick={handleLogout}
       disabled={loading}
-      className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+      aria-label="Sign out"
+      title="Sign out"
+      className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-600 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
     >
-      {loading ? "Signing out..." : "Sign Out"}
+      <LogOut size={19} aria-hidden="true"/>
     </button>
   );
 }

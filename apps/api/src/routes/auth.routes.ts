@@ -18,6 +18,8 @@ import {
   loginSchema,
 } from "../schemas/auth.schema.js";
 
+import { requireAuth } from "../middleware/auth.middleware.js";
+
 const router = Router();
 
 router.post(
@@ -139,5 +141,63 @@ router.post(
     }
   },
 );
+
+router.get("/me", requireAuth, async (req, res) => {
+  try {
+    if (!req.auth) {
+      return res.status(401).json({
+        error: "Authentication required",
+      });
+    }
+
+    const membership =
+      await prisma.householdMember.findUnique({
+        where: {
+          householdId_userId: {
+            householdId: req.auth.householdId,
+            userId: req.auth.userId,
+          },
+        },
+
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              displayName: true,
+            },
+          },
+
+          household: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      });
+
+    if (!membership) {
+      return res.status(403).json({
+        error: "Household membership not found",
+      });
+    }
+
+    return res.json({
+      user: membership.user,
+
+      household: {
+        ...membership.household,
+        role: membership.role,
+      },
+    });
+  } catch (error) {
+    console.error("Current user lookup failed:", error);
+
+    return res.status(500).json({
+      error: "Unable to retrieve user",
+    });
+  }
+});
 
 export default router;

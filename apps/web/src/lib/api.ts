@@ -6,13 +6,15 @@ import { getSessionToken } from "@/lib/session";
 
 import type { Dashboard } from "@/types/dashboard";
 
-import type {
+import {
   Category,
+  CategoryTreeNode,
   Expense,
   MonthlyBudget,
   MonthlyPlan,
   PaymentMethod,
 } from "@/types/finance";
+import { AuthenticatedUser } from "@/types/auth";
 
 const API_BASE_URL =
   process.env.API_BASE_URL ?? "http://localhost:4000";
@@ -79,6 +81,10 @@ export function getDashboard(
   return apiGet(`/api/dashboard/${month}`);
 }
 
+export function getCurrentUser(): Promise<AuthenticatedUser>{
+  return apiGet<AuthenticatedUser>("/api/auth/me");
+}
+
 export function getCategories(): Promise<Category[]> {
   return apiGet("/api/categories");
 }
@@ -106,3 +112,10 @@ export function getBudgets(
 ): Promise<MonthlyBudget[]> {
   return apiGet(`/api/budgets/${month}`);
 }
+
+export function getCategoryTree():
+  Promise<CategoryTreeNode[]>{
+    return apiGet<CategoryTreeNode[]>(
+      "/api/categories/tree",
+    );
+  }
