@@ -147,3 +147,14 @@ model MonthlyBudget {
   @@index([householdId, month])
   @@map("monthly_budgets")
 }
+
+model CarryForwardTransfer {
+  id            Int      @id @default(autoincrement())
+  householdId   Int
+  month         DateTime @db.Date
+  amount        Decimal  @db.Decimal(14, 2)
+  transferredAt DateTime @default(now())
+
+  @@index([householdId, month])
+  @@map("carry_forward_transfers")
+}

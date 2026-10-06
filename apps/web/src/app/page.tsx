@@ -21,6 +21,7 @@ import MonthlySetup from "@/components/monthly-setup";
 import AddExpenseForm from "@/components/add-expense-form";
 import TransactionList from "@/components/transaction-list";
 import CategoryManager from "@/components/category-manager";
+import CarryForwardTransfer from "@/components/carry-forward-transfer";
 
 type PageProps = {
   searchParams?: Promise<{
@@ -31,25 +32,33 @@ type PageProps = {
 export default async function Home({
   searchParams,
 }: PageProps) {
-  const token = await getSessionToken();
+  const token =
+    await getSessionToken();
 
   if (!token) {
     redirect("/login");
   }
 
-  const params = await searchParams;
+  const params =
+    await searchParams;
 
-  const requestedMonth = params?.month;
+  const requestedMonth =
+    params?.month;
 
-  const now = new Date();
+  const now =
+    new Date();
 
   const currentMonth =
     `${now.getFullYear()}-` +
-    String(now.getMonth() + 1).padStart(2, "0");
+    String(
+      now.getMonth() + 1,
+    ).padStart(2, "0");
 
   const month =
     requestedMonth &&
-    /^\d{4}-(0[1-9]|1[0-2])$/.test(requestedMonth)
+    /^\d{4}-(0[1-9]|1[0-2])$/.test(
+      requestedMonth,
+    )
       ? requestedMonth
       : currentMonth;
 
@@ -71,16 +80,23 @@ export default async function Home({
     getBudgets(month),
   ]);
 
-  const isOwner = identity.household.role === "owner";
+  const isOwner =
+    identity.household.role ===
+    "owner";
 
-  const formattedMonth = new Intl.DateTimeFormat(
-    "en-IN",
-    {
-      month: "long",
-      year: "numeric",
-      timeZone: "UTC",
-    },
-  ).format(new Date(`${month}-01T00:00:00.000Z`));
+  const formattedMonth =
+    new Intl.DateTimeFormat(
+      "en-IN",
+      {
+        month: "long",
+        year: "numeric",
+        timeZone: "UTC",
+      },
+    ).format(
+      new Date(
+        `${month}-01T00:00:00.000Z`,
+      ),
+    );
 
   return (
     <main className="min-h-screen bg-[#F0F5FF] px-4 py-6 text-gray-900 sm:px-6 lg:px-8">
@@ -92,26 +108,39 @@ export default async function Home({
 
             <div>
               <p className="text-xs font-bold uppercase tracking-wider text-indigo-600">
-                Household Expense Tracker
+                Household Expense
+                Tracker
               </p>
 
               <h1 className="mt-2 text-2xl font-bold text-slate-900 sm:text-3xl">
-                Welcome, {identity.user.displayName}!
+                Welcome,{" "}
+                {
+                  identity.user
+                    .displayName
+                }
+                !
               </h1>
 
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <p className="text-sm text-gray-500">
-                  {identity.household.name}
+                  {
+                    identity.household
+                      .name
+                  }
                 </p>
 
                 <span className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-700">
-                  {isOwner ? "Owner" : "Member"}
+                  {isOwner
+                    ? "Owner"
+                    : "Member"}
                 </span>
               </div>
             </div>
 
             <div className="flex items-center gap-3">
-              <MonthSelector month={month} />
+              <MonthSelector
+                month={month}
+              />
               <LogoutButton />
             </div>
           </div>
@@ -123,8 +152,26 @@ export default async function Home({
             {formattedMonth} Overview
           </h2>
 
-          <FinanceSummary dashboard={dashboard} />
+          <FinanceSummary
+            dashboard={dashboard}
+          />
         </section>
+
+        {/* Owner-only UPI carry-forward transfer */}
+        {isOwner &&
+          Number(
+            dashboard.summary
+              .carryForward,
+          ) > 0 && (
+            <CarryForwardTransfer
+              key={`carry-forward-${month}`}
+              month={month}
+              carryForward={
+                dashboard.summary
+                  .carryForward
+              }
+            />
+          )}
 
         {/* Financial charts */}
         <FinanceCharts
@@ -135,7 +182,9 @@ export default async function Home({
         {/* Category budgets and alerts */}
         <BudgetOverview
           key={`budget-overview-${month}`}
-          categories={dashboard.categories}
+          categories={
+            dashboard.categories
+          }
         />
 
         {/* Income and budget configuration: owner only */}
@@ -143,14 +192,18 @@ export default async function Home({
           <MonthlySetup
             key={`monthly-setup-${month}`}
             month={month}
-            categories={categories}
+            categories={
+              categories
+            }
             budgets={budgets}
           />
         )}
 
         {isOwner && (
           <CategoryManager
-            categories={categoryTree}
+            categories={
+              categoryTree
+            }
           />
         )}
 
@@ -159,7 +212,9 @@ export default async function Home({
           key={`add-expense-${month}`}
           month={month}
           categories={categories}
-          paymentMethods={paymentMethods}
+          paymentMethods={
+            paymentMethods
+          }
         />
 
         {/* Both users can view transactions;
@@ -168,7 +223,9 @@ export default async function Home({
           key={`transactions-${month}`}
           expenses={expenses}
           categories={categories}
-          paymentMethods={paymentMethods}
+          paymentMethods={
+            paymentMethods
+          }
           canManage={isOwner}
         />
 
